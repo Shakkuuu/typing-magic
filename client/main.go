@@ -499,14 +499,6 @@ func (g *Game) handlePlayerStatesUpdate(msg map[string]interface{}) {
 			if mp, ok := state["mp"].(float64); ok {
 				g.player.MP = int(mp)
 			}
-			if x, ok := state["x"].(float64); ok {
-				g.serverPlayerX = x
-				g.hasServerPos = true
-			}
-			if y, ok := state["y"].(float64); ok {
-				g.serverPlayerY = y
-				g.hasServerPos = true
-			}
 		} else {
 			if g.otherPlayers[id] == nil {
 				g.otherPlayers[id] = &Player{}

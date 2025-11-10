@@ -253,7 +253,6 @@ type Game struct {
 	serverPlayerX   float64
 	serverPlayerY   float64
 	hasServerPos    bool
-	remoteStates    map[string]*Player
 }
 
 // getWebSocketURL HTMLのmetaタグからWebSocketのURLを取得
@@ -312,7 +311,6 @@ func NewGame() *Game {
 		serverPlayerX: screenWidth / 2,
 		serverPlayerY: territoryBoundary + 50,
 		hasServerPos:  true,
-		remoteStates:  make(map[string]*Player),
 	}
 
 	go game.connectWebSocket()
@@ -505,21 +503,16 @@ func (g *Game) handlePlayerStatesUpdate(msg map[string]interface{}) {
 			if g.otherPlayers[id] == nil {
 				g.otherPlayers[id] = &Player{}
 			}
-			if g.remoteStates[id] == nil {
-				g.remoteStates[id] = &Player{}
-			}
 			if x, ok := state["x"].(float64); ok {
-				g.remoteStates[id].X = x
+				g.otherPlayers[id].X = x
 			}
 			if y, ok := state["y"].(float64); ok {
-				g.remoteStates[id].Y = y
+				g.otherPlayers[id].Y = y
 			}
 			if hp, ok := state["hp"].(float64); ok {
-				g.remoteStates[id].HP = int(hp)
 				g.otherPlayers[id].HP = int(hp)
 			}
 			if mp, ok := state["mp"].(float64); ok {
-				g.remoteStates[id].MP = int(mp)
 				g.otherPlayers[id].MP = int(mp)
 			}
 		}
@@ -883,19 +876,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	vector.DrawFilledRect(screen, 0, 0, float32(screenWidth), lineWidth, color.White, false)
 
 	g.playersMutex.RLock()
-	for id, otherPlayer := range g.otherPlayers {
+	for _, otherPlayer := range g.otherPlayers {
 		width := float32(playerSize)
 		height := float32(playerSize)
-		dx := float32(otherPlayer.X)
-		dy := float32(otherPlayer.Y)
-		if remote := g.remoteStates[id]; remote != nil {
-			dx = float32(remote.X)
-			dy = float32(remote.Y)
-			if g.isBottom {
-				dy = float32(screenHeight) - dy
-			}
-		}
-		vector.DrawFilledRect(screen, dx, dy, width, height, color.RGBA{255, 0, 0, 255}, false)
+		vector.DrawFilledRect(screen, float32(otherPlayer.X), float32(otherPlayer.Y), width, height, color.RGBA{255, 0, 0, 255}, false)
 	}
 	g.playersMutex.RUnlock()
 

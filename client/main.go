@@ -691,7 +691,25 @@ func (g *Game) Update() error {
 	}
 
 	inputMoved := g.player.X != prevX || g.player.Y != prevY
-	correctionApplied := false
+
+	if inputMoved {
+		g.connMutex.RLock()
+		conn := g.conn
+		g.connMutex.RUnlock()
+
+		if conn != nil {
+			g.serverPlayerX = g.player.X
+			g.serverPlayerY = g.player.Y
+			g.hasServerPos = true
+			position := map[string]float64{
+				"x": g.player.X,
+				"y": g.player.Y,
+			}
+			if err := conn.SendJSON(position); err != nil {
+				log.Printf("Write error: %v", err)
+			}
+		}
+	}
 
 	if g.hasServerPos {
 		dxTarget := g.serverPlayerX - g.player.X
@@ -703,7 +721,6 @@ func (g *Game) Update() error {
 			correctionFactor    = 0.20
 		)
 		if correctionDistance > correctionThreshold {
-			correctionApplied = true
 			if correctionDistance > snapThreshold {
 				g.player.X = g.serverPlayerX
 				g.player.Y = g.serverPlayerY
@@ -722,25 +739,6 @@ func (g *Game) Update() error {
 			}
 			if g.player.Y > screenHeight-playerSize {
 				g.player.Y = screenHeight - playerSize
-			}
-		}
-	}
-
-	if inputMoved && !correctionApplied {
-		g.connMutex.RLock()
-		conn := g.conn
-		g.connMutex.RUnlock()
-
-		if conn != nil {
-			g.serverPlayerX = g.player.X
-			g.serverPlayerY = g.player.Y
-			g.hasServerPos = true
-			position := map[string]float64{
-				"x": g.player.X,
-				"y": g.player.Y,
-			}
-			if err := conn.SendJSON(position); err != nil {
-				log.Printf("Write error: %v", err)
 			}
 		}
 	}

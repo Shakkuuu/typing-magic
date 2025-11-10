@@ -250,6 +250,9 @@ type Game struct {
 	// 接続試行中かどうか
 	connecting      bool
 	debrisParticles []DebrisParticle
+	serverPlayerX   float64
+	serverPlayerY   float64
+	hasServerPos    bool
 }
 
 // getWebSocketURL HTMLのmetaタグからWebSocketのURLを取得
@@ -298,13 +301,16 @@ func NewGame() *Game {
 			HP: maxHP,
 			MP: maxMP,
 		},
-		conn:         nil,
-		typingBuffer: "",
-		lastMessage:  "",
-		otherPlayers: make(map[string]*Player),
-		projectiles:  make(map[string]*Projectile),
-		myID:         "",
-		isBottom:     true,
+		conn:          nil,
+		typingBuffer:  "",
+		lastMessage:   "",
+		otherPlayers:  make(map[string]*Player),
+		projectiles:   make(map[string]*Projectile),
+		myID:          "",
+		isBottom:      true,
+		serverPlayerX: screenWidth / 2,
+		serverPlayerY: territoryBoundary + 50,
+		hasServerPos:  true,
 	}
 
 	go game.connectWebSocket()
@@ -436,8 +442,9 @@ func (g *Game) readMessages() {
 		if x, ok := msg["x"].(float64); ok {
 			if y, ok := msg["y"].(float64); ok {
 				if msgType, ok := msg["type"].(string); !ok || msgType == "" {
-					g.player.X = x
-					g.player.Y = y
+					g.serverPlayerX = x
+					g.serverPlayerY = y
+					g.hasServerPos = true
 					continue
 				}
 			}
@@ -493,10 +500,12 @@ func (g *Game) handlePlayerStatesUpdate(msg map[string]interface{}) {
 				g.player.MP = int(mp)
 			}
 			if x, ok := state["x"].(float64); ok {
-				g.player.X = x
+				g.serverPlayerX = x
+				g.hasServerPos = true
 			}
 			if y, ok := state["y"].(float64); ok {
-				g.player.Y = y
+				g.serverPlayerY = y
+				g.hasServerPos = true
 			}
 		} else {
 			if g.otherPlayers[id] == nil {
@@ -689,7 +698,43 @@ func (g *Game) Update() error {
 		g.player.Y = screenHeight - playerSize
 	}
 
-	if g.player.X != prevX || g.player.Y != prevY {
+	inputMoved := g.player.X != prevX || g.player.Y != prevY
+	correctionApplied := false
+
+	if g.hasServerPos {
+		dxTarget := g.serverPlayerX - g.player.X
+		dyTarget := g.serverPlayerY - g.player.Y
+		correctionDistance := math.Hypot(dxTarget, dyTarget)
+		const (
+			correctionThreshold = 4.0
+			snapThreshold       = 40.0
+			correctionFactor    = 0.20
+		)
+		if correctionDistance > correctionThreshold {
+			correctionApplied = true
+			if correctionDistance > snapThreshold {
+				g.player.X = g.serverPlayerX
+				g.player.Y = g.serverPlayerY
+			} else {
+				g.player.X += dxTarget * correctionFactor
+				g.player.Y += dyTarget * correctionFactor
+			}
+			if g.player.X < 0 {
+				g.player.X = 0
+			}
+			if g.player.X > screenWidth-playerSize {
+				g.player.X = screenWidth - playerSize
+			}
+			if g.player.Y < territoryBoundary {
+				g.player.Y = territoryBoundary
+			}
+			if g.player.Y > screenHeight-playerSize {
+				g.player.Y = screenHeight - playerSize
+			}
+		}
+	}
+
+	if inputMoved && !correctionApplied {
 		g.connMutex.RLock()
 		conn := g.conn
 		g.connMutex.RUnlock()

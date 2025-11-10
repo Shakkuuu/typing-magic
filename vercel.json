@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd .. && ./build-wasm.sh",
+  "buildCommand": "cd ../client && GOOS=js GOARCH=wasm go build -o ../static/typing-magic.wasm .",
   "outputDirectory": "static",
   "routes": [
     {

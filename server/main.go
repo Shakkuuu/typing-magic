@@ -716,20 +716,18 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 					playerStatesMutex.RLock()
 					var displayY float64 = correctedY
 					if state, exists := playerStates[conn]; exists {
-						// クライアントの視点に応じて座標を変換
 						if state.IsBottom {
-							// 下側のプレイヤーの場合、座標はそのまま
 							displayY = correctedY
 						} else {
-							// 上側のプレイヤーの場合、座標を反転（自分の視点では下側にいるため）
 							displayY = screenHeight - correctedY
 						}
 					}
 					playerStatesMutex.RUnlock()
 
-					correctedPosition := map[string]float64{
-						"x": correctedX,
-						"y": displayY,
+					correctedPosition := map[string]interface{}{
+						"type": "positionCorrection",
+						"x":    correctedX,
+						"y":    displayY,
 					}
 					correctedJSON, _ := json.Marshal(correctedPosition)
 					if err := safeWriteMessage(conn, websocket.TextMessage, correctedJSON); err != nil {

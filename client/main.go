@@ -438,18 +438,6 @@ func (g *Game) readMessages() {
 			continue
 		}
 
-		// 位置情報の修正メッセージを処理
-		if x, ok := msg["x"].(float64); ok {
-			if y, ok := msg["y"].(float64); ok {
-				if msgType, ok := msg["type"].(string); !ok || msgType == "" {
-					g.serverPlayerX = x
-					g.serverPlayerY = y
-					g.hasServerPos = true
-					continue
-				}
-			}
-		}
-
 		// メッセージタイプで分岐
 		if msgType, ok := msg["type"].(string); ok {
 			switch msgType {
@@ -464,6 +452,15 @@ func (g *Game) readMessages() {
 				g.handlePlayerStatesUpdate(msg)
 			case "projectiles":
 				g.handleProjectilesUpdate(msg)
+			case "positionCorrection":
+				if x, ok := msg["x"].(float64); ok {
+					if y, ok := msg["y"].(float64); ok {
+						g.serverPlayerX = x
+						g.serverPlayerY = y
+						g.hasServerPos = true
+					}
+				}
+				continue
 			}
 		}
 

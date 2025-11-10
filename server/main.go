@@ -1246,11 +1246,7 @@ func main() {
 	// WebSocketエンドポイント
 	http.HandleFunc("/ws", handleConnections)
 
-	// 静的ファイル配信（開発用、本番では別途CDNを使用推奨）
-	// 本番環境では、クライアントはVercel/Netlifyなどでホストし、
-	// サーバーはWebSocketのみを提供することを推奨
-	fs := http.FileServer(http.Dir("../static"))
-	http.Handle("/", fs)
+	http.HandleFunc("/health", handleHealthCheck)
 
 	// ゲームループを開始
 	go gameLoop()
@@ -1265,4 +1261,9 @@ func main() {
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal("Server error:", err)
 	}
+}
+
+func handleHealthCheck(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
 }

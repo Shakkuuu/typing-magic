@@ -740,6 +740,9 @@ func (g *Game) Update() error {
 		g.connMutex.RUnlock()
 
 		if conn != nil {
+			g.serverPlayerX = g.player.X
+			g.serverPlayerY = g.player.Y
+			g.hasServerPos = true
 			position := map[string]float64{
 				"x": g.player.X,
 				"y": g.player.Y,

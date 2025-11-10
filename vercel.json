@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "buildCommand": "cd .. && ./build-wasm.sh",
+  "outputDirectory": "static",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}
+

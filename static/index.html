@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- WebSocketサーバーのURLを設定（オプション） -->
+    <!-- <meta name="ws-url" content="wss://your-server.com/ws"> -->
+    <title>Typing Magic</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #1a1a1a;
+            font-family: 'Courier New', monospace;
+            color: white;
+        }
+        #gameContainer {
+            position: relative;
+            border: 2px solid #333;
+            background: #000;
+        }
+        #gameContainer canvas {
+            display: block;
+            outline: none;
+            cursor: pointer;
+        }
+        #gameContainer canvas:focus {
+            outline: 2px solid #00ff00;
+        }
+        #myStatus {
+            position: absolute;
+            bottom: 100px;
+            left: 10px;
+            font-size: 14px;
+            z-index: 10;
+        }
+        #enemyStatus {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 14px;
+            z-index: 10;
+        }
+        #typingBuffer {
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            font-size: 16px;
+            color: #ffff00;
+            z-index: 10;
+        }
+        #message {
+            position: absolute;
+            bottom: 75px;
+            left: 10px;
+            font-size: 14px;
+            color: #00ff00;
+            z-index: 10;
+        }
+        #connectionStatus {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 3px;
+            z-index: 10;
+        }
+        .connected {
+            background: #00ff00;
+            color: #000;
+        }
+        .disconnected {
+            background: #ff0000;
+            color: #fff;
+        }
+        .connecting {
+            background: #ffff00;
+            color: #000;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            color: #ffffff;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Ebitengineが自動的にcanvas要素を作成します -->
+        <div id="loading">WASMを読み込み中...</div>
+    </div>
+    <!-- Go WASMランタイム -->
+    <script src="wasm_exec.js"></script>
+    <script>
+        // WASMを読み込んで実行
+        const go = new Go();
+        WebAssembly.instantiateStreaming(fetch("typing-magic.wasm"), go.importObject)
+            .then((result) => {
+                document.getElementById('loading').style.display = 'none';
+                go.run(result.instance);
+
+                // Ebitengineが作成したcanvas要素をgameContainerに移動
+                setTimeout(() => {
+                    const canvas = document.querySelector('canvas');
+                    if (canvas) {
+                        const container = document.getElementById('gameContainer');
+                        if (container && canvas.parentElement !== container) {
+                            container.insertBefore(canvas, container.firstChild);
+                            // canvasにフォーカスを設定
+                            canvas.setAttribute('tabindex', '0');
+                            canvas.focus();
+                        }
+                    }
+                }, 100);
+            })
+            .catch((err) => {
+                console.error("WASM読み込みエラー:", err);
+                document.getElementById('loading').textContent = 'WASM読み込みエラー: ' + err.message;
+            });
+    </script>
+</body>
+</html>

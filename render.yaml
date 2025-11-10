@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: typing-magic-server
+    env: go
+    region: oregon
+    plan: free
+    rootDir: server
+    buildCommand: go build -o typing-magic-server
+    startCommand: ./typing-magic-server
+    envVars:
+      - key: PORT
+        value: 10000
+      # CORS_ORIGIN は手動で設定してください（VercelのクライアントURL）
+

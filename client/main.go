@@ -51,44 +51,6 @@ type Projectile struct {
 	Element string
 }
 
-type DebrisParticle struct {
-	X       float64
-	Y       float64
-	VX      float64
-	VY      float64
-	Life    int
-	Element string
-}
-
-func (dp *DebrisParticle) Update() bool {
-	dp.X += dp.VX
-	dp.Y += dp.VY
-	dp.Life--
-	return dp.Life <= 0
-}
-
-func (dp *DebrisParticle) Draw(screen *ebiten.Image) {
-	dColor := elementColor(dp.Element)
-	vector.DrawFilledRect(screen, float32(dp.X), float32(dp.Y), 2, 2, dColor, false)
-}
-
-func (g *Game) spawnDebris(x, y, vx, vy float64, element string) {
-	count := 3
-	for i := 0; i < count; i++ {
-		angle := (float64(i) / float64(count)) * math.Pi * 2
-		speed := 0.6 + float64(i)*0.15
-		particle := DebrisParticle{
-			X:       x,
-			Y:       y,
-			VX:      vx*0.2 + math.Cos(angle)*speed,
-			VY:      vy*0.2 + math.Sin(angle)*speed,
-			Life:    20,
-			Element: element,
-		}
-		g.debrisParticles = append(g.debrisParticles, particle)
-	}
-}
-
 // WASMWebSocket JavaScriptのWebSocket APIをラップ
 type WASMWebSocket struct {
 	ws          js.Value
@@ -248,11 +210,10 @@ type Game struct {
 	// 接続状態
 	connectionError string
 	// 接続試行中かどうか
-	connecting      bool
-	debrisParticles []DebrisParticle
-	serverPlayerX   float64
-	serverPlayerY   float64
-	hasServerPos    bool
+	connecting    bool
+	serverPlayerX float64
+	serverPlayerY float64
+	hasServerPos  bool
 }
 
 // getWebSocketURL HTMLのmetaタグからWebSocketのURLを取得
@@ -588,9 +549,6 @@ func (g *Game) handleProjectilesUpdate(msg map[string]interface{}) {
 				Height:  height,
 				Element: element,
 			}
-			if hasVX || hasVY {
-				g.spawnDebris(x, y, vx, vy, element)
-			}
 		}
 	}
 
@@ -641,10 +599,6 @@ func (g *Game) handleCastEvent(msg map[string]interface{}, castEvent string) {
 		Element: element,
 	}
 	g.projectilesMutex.Unlock()
-
-	if vx != 0 || vy != 0 {
-		g.spawnDebris(x, y, vx, vy, element)
-	}
 }
 
 func (g *Game) Update() error {
@@ -893,10 +847,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 		proj.X += proj.VX
 		proj.Y += proj.VY
-		speed := math.Hypot(proj.VX, proj.VY)
-		if speed > 0.1 {
-			g.spawnDebris(proj.X, proj.Y, proj.VX, proj.VY, proj.Element)
-		}
 		projColor := elementColor(proj.Element)
 		vector.DrawFilledRect(screen, float32(proj.X), float32(proj.Y), float32(width), float32(height), projColor, false)
 		if proj.X >= -width && proj.X <= float64(screenWidth) && proj.Y >= -height && proj.Y <= float64(screenHeight) {
@@ -910,18 +860,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.projectiles[proj.ID] = proj
 	}
 	g.projectilesMutex.Unlock()
-
-	// Debris drawing
-	activeParticles := g.debrisParticles[:0]
-	for i := range g.debrisParticles {
-		particle := &g.debrisParticles[i]
-		if particle.Update() {
-			continue
-		}
-		particle.Draw(screen)
-		activeParticles = append(activeParticles, *particle)
-	}
-	g.debrisParticles = activeParticles
 
 	vector.DrawFilledRect(screen, float32(g.player.X), float32(g.player.Y), float32(playerSize), float32(playerSize), color.White, false)
 
